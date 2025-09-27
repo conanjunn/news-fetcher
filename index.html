@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新闻总结系统</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .news-list {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .news-content {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            min-height: 400px;
+        }
+
+        .news-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: #f8f9fa;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .news-item:hover {
+            background: #e9ecef;
+        }
+
+        .news-item.active {
+            background: #007bff;
+            color: white;
+        }
+
+        .loading {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+        }
+
+        .error {
+            color: #dc3545;
+            background: #f8d7da;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+
+        .success {
+            color: #155724;
+            background: #d4edda;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            transition: background-color 0.3s;
+        }
+
+        .btn:hover {
+            background: #0056b3;
+        }
+
+        .btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+
+        .markdown-content {
+            line-height: 1.6;
+        }
+
+        .markdown-content h2 {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 5px;
+        }
+
+        .markdown-content ul {
+            padding-left: 20px;
+        }
+
+        .markdown-content li {
+            margin: 8px 0;
+        }
+
+        .no-files {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            padding: 50px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📰 新闻总结系统</h1>
+        <p>查看AI总结的财联社电报新闻</p>
+        <button class="btn" onclick="refreshNewsList()">🔄 刷新列表</button>
+    </div>
+
+    <div class="news-list">
+        <h3>📋 新闻文件列表</h3>
+        <div id="news-files-container">
+            <div class="loading">正在加载新闻列表...</div>
+        </div>
+    </div>
+
+    <div class="news-content">
+        <h3>📄 新闻内容</h3>
+        <div id="news-content-container">
+            <div class="no-files">请选择一个新闻文件查看内容</div>
+        </div>
+    </div>
+
+    <script>
+        let currentFiles = [];
+        let selectedFile = null;
+
+        // 页面加载时获取新闻列表
+        document.addEventListener('DOMContentLoaded', function() {
+            loadNewsList();
+        });
+
+        // 加载新闻列表
+        async function loadNewsList() {
+            try {
+                const response = await fetch('/news/list');
+                const data = await response.json();
+
+                if (data.success) {
+                    currentFiles = data.files;
+                    displayNewsList(data.files);
+                } else {
+                    showError('加载新闻列表失败: ' + data.error);
+                }
+            } catch (error) {
+                showError('网络错误: ' + error.message);
+            }
+        }
+
+        // 显示新闻列表
+        function displayNewsList(files) {
+            const container = document.getElementById('news-files-container');
+
+            if (files.length === 0) {
+                container.innerHTML = '<div class="no-files">暂无新闻文件</div>';
+                return;
+            }
+
+            let html = '';
+            files.forEach(file => {
+                const [date, time] = file.split('/');
+                const displayDate = formatDate(date);
+                const displayTime = time.replace(/-/g, ':');
+
+                html += `
+                    <div class="news-item" onclick="selectNewsFile('${file}')">
+                        📅 ${displayDate} ${displayTime}
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        // 选择新闻文件
+        async function selectNewsFile(file) {
+            // 更新选中状态
+            document.querySelectorAll('.news-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            selectedFile = file;
+
+            // 显示加载状态
+            const contentContainer = document.getElementById('news-content-container');
+            contentContainer.innerHTML = '<div class="loading">正在加载新闻内容...</div>';
+
+            try {
+                const response = await fetch(`/news/${file}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    displayNewsContent(data.content);
+                } else {
+                    showError('加载新闻内容失败: ' + data.error);
+                }
+            } catch (error) {
+                showError('网络错误: ' + error.message);
+            }
+        }
+
+        // 显示新闻内容
+        function displayNewsContent(content) {
+            const container = document.getElementById('news-content-container');
+
+            // 简单的markdown转HTML
+            let html = content
+                .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+                .replace(/^- (.+)$/gm, '<li>$1</li>')
+                .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
+                .replace(/<font color="red">(.+?)<\/font>/g, '<span style="color: red; font-weight: bold;">$1</span>')
+                .replace(/\n/g, '<br>');
+
+            container.innerHTML = `<div class="markdown-content">${html}</div>`;
+        }
+
+        // 刷新新闻列表
+        function refreshNewsList() {
+            document.getElementById('news-files-container').innerHTML = '<div class="loading">正在刷新新闻列表...</div>';
+            loadNewsList();
+        }
+
+        // 显示错误信息
+        function showError(message) {
+            const container = document.getElementById('news-content-container');
+            container.innerHTML = `<div class="error">❌ ${message}</div>`;
+        }
+
+        // 格式化日期
+        function formatDate(dateStr) {
+            const year = dateStr.substring(0, 4);
+            const month = dateStr.substring(4, 6);
+            const day = dateStr.substring(6, 8);
+            return `${year}-${month}-${day}`;
+        }
+    </script>
+</body>
+</html>
