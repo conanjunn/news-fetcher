@@ -252,32 +252,52 @@
         function displayNewsContent(content) {
             const container = document.getElementById('news-content-container');
 
-            // 按照双换行分割新闻条目
-            const articles = content.split('\n\n').filter(article => article.trim());
-
+            // 按分类解析新闻内容
+            const sections = content.split('\n\n').filter(section => section.trim());
             let html = '';
-            articles.forEach((article, index) => {
-                // 简单的markdown转HTML
-                let articleHtml = article
-                    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-                    .replace(/^- (.+)$/gm, '<li>$1</li>')
-                    .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
-                    .replace(/<font color="red">(.+?)<\/font>/g, '<span style="color: red; font-weight: bold;">$1</span>')
-                    .replace(/\n/g, '<br>');
+            let newsIndex = 0;
+            const allNewsItems = [];
 
-                html += `
-                    <div class="news-article">
-                        <div class="markdown-content">${articleHtml}</div>
-                        <button class="copy-btn" onclick="copyNewsContent(${index}, this)">📋 复制这条新闻</button>
-                        <span class="copy-success" id="copy-success-${index}" style="display: none;">已复制!</span>
-                    </div>
-                `;
+            sections.forEach(section => {
+                const lines = section.split('\n');
+                const categoryMatch = lines[0].match(/^## (.+)$/);
+
+                if (categoryMatch) {
+                    // 这是一个分类
+                    const categoryName = categoryMatch[1];
+                    html += `<h2>${categoryName}</h2>`;
+
+                    // 处理该分类下的新闻条目
+                    for (let i = 1; i < lines.length; i++) {
+                        const line = lines[i].trim();
+                        if (line.startsWith('- ')) {
+                            // 这是一条新闻
+                            let newsContent = line.substring(2); // 移除 "- "
+                            let displayContent = newsContent;
+
+                            // 处理红色字体标记
+                            displayContent = displayContent.replace(/<font color="red">(.+?)<\/font>/g, '<span style="color: red; font-weight: bold;">$1</span>');
+
+                            html += `
+                                <div class="news-item-container" style="margin: 8px 0; padding: 8px; background: #f8f9fa; border-radius: 4px;">
+                                    <div style="margin-bottom: 5px;">${displayContent}</div>
+                                    <button class="copy-btn" onclick="copyNewsContent(${newsIndex}, this)" style="font-size: 11px; padding: 3px 8px;">📋 复制</button>
+                                    <span class="copy-success" id="copy-success-${newsIndex}" style="display: none;">已复制!</span>
+                                </div>
+                            `;
+
+                            // 存储原始新闻内容（不包含markdown标记）
+                            allNewsItems.push(newsContent.replace(/<font color="red">(.+?)<\/font>/g, '$1'));
+                            newsIndex++;
+                        }
+                    }
+                }
             });
 
             container.innerHTML = html;
 
-            // 存储原始文章内容用于复制
-            window.newsArticles = articles;
+            // 存储所有新闻条目用于复制
+            window.newsArticles = allNewsItems;
         }
 
         // 刷新新闻列表
@@ -307,8 +327,15 @@
                 return;
             }
 
+            // 转换为纯文本，移除markdown格式
+            let plainText = window.newsArticles[index]
+                .replace(/^## /gm, '')  // 移除标题的 ##
+                .replace(/^- /gm, '')   // 移除列表的 -
+                .replace(/<font color="red">(.+?)<\/font>/g, '$1')  // 移除红色字体标记
+                .trim();
+
             try {
-                await navigator.clipboard.writeText(window.newsArticles[index]);
+                await navigator.clipboard.writeText(plainText);
 
                 // 显示复制成功提示
                 const successSpan = document.getElementById(`copy-success-${index}`);
@@ -321,7 +348,7 @@
             } catch (err) {
                 // 降级方案：使用传统的复制方法
                 const textarea = document.createElement('textarea');
-                textarea.value = window.newsArticles[index];
+                textarea.value = plainText;
                 document.body.appendChild(textarea);
                 textarea.select();
 
