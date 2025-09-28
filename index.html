@@ -447,10 +447,35 @@
             return `${year}-${month}-${day}`;
         }
 
+        // 将UTC时间字符串转换为中国+8时区时间
+        function convertUtcToChinaTime(timeStr) {
+            try {
+                // 解析时间字符串 'HH-MM-SS'
+                const [hours, minutes, seconds] = timeStr.split('-').map(num => parseInt(num, 10));
+
+                // 创建一个今天的UTC时间
+                const utcDate = new Date();
+                utcDate.setUTCHours(hours, minutes, seconds, 0);
+
+                // 转换为中国时区 (UTC+8)
+                const chinaTime = new Date(utcDate.getTime() + 8 * 60 * 60 * 1000);
+
+                // 格式化输出
+                const chinaHours = chinaTime.getUTCHours().toString().padStart(2, '0');
+                const chinaMinutes = chinaTime.getUTCMinutes().toString().padStart(2, '0');
+                const chinaSeconds = chinaTime.getUTCSeconds().toString().padStart(2, '0');
+
+                return `${chinaHours}:${chinaMinutes}:${chinaSeconds}`;
+            } catch (error) {
+                console.error('时间转换失败:', error);
+                return timeStr.replace(/-/g, ':'); // 转换失败时返回原格式
+            }
+        }
+
         // 格式化时间，显示为中国时间（+8时区）
         function formatTime(timeStr) {
-            const time = timeStr.replace(/-/g, ':');
-            return `${time} (UTC+8)`;
+            const chinaTime = convertUtcToChinaTime(timeStr);
+            return `${chinaTime} (UTC+8)`;
         }
 
         // 复制新闻内容
