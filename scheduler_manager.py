@@ -67,6 +67,34 @@ class SchedulerManager:
             logger.error(f"添加定时任务失败: {e}")
             raise
 
+    def add_daily_cleanup_job(self):
+        """添加每日新闻清理任务"""
+        try:
+            self.scheduler.add_job(
+                func=self._run_cleanup_script,
+                trigger=CronTrigger(hour=2, minute=0),  # 每天凌晨2点执行
+                id='daily_news_cleanup',
+                name='每日新闻清理任务',
+                replace_existing=True
+            )
+            logger.info("定时任务配置成功：每天凌晨2点执行新闻清理")
+        except Exception as e:
+            logger.error(f"添加清理任务失败: {e}")
+            raise
+
+    def _run_cleanup_script(self):
+        """执行新闻清理脚本"""
+        try:
+            logger.info("开始执行新闻清理任务")
+            from news_cleaner import clean_old_news
+            result = clean_old_news()
+            if result['success']:
+                logger.info(f"新闻清理成功：删除 {result['deleted_files']} 个文件，{result['deleted_dirs']} 个目录")
+            else:
+                logger.error(f"新闻清理失败：{result['error']}")
+        except Exception as e:
+            logger.error(f"执行新闻清理脚本失败: {e}")
+
     def add_manual_job(self) -> str:
         """
         添加手动执行任务

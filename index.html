@@ -38,22 +38,55 @@
             min-height: 400px;
         }
 
+        .news-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 10px;
+            margin: 15px 0;
+        }
+
         .news-item {
-            padding: 10px;
-            margin: 5px 0;
+            padding: 8px 12px;
             background: #f8f9fa;
             border-radius: 5px;
             cursor: pointer;
             transition: background-color 0.3s;
+            font-size: 13px;
+            border: 1px solid #e9ecef;
+            word-wrap: break-word;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
         }
 
         .news-item:hover {
             background: #e9ecef;
+            border-color: #adb5bd;
         }
 
         .news-item.active {
             background: #007bff;
             color: white;
+            border-color: #007bff;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .news-grid {
+                grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+                gap: 8px;
+            }
+            .news-item {
+                font-size: 12px;
+                padding: 6px 10px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .news-grid {
+                grid-template-columns: 1fr;
+                gap: 5px;
+            }
         }
 
         .loading {
@@ -152,6 +185,51 @@
             font-size: 12px;
             margin-left: 5px;
         }
+
+        .pagination-info {
+            font-size: 14px;
+            color: #666;
+            text-align: center;
+            margin: 15px 0;
+            padding: 8px;
+            background: #f0f0f0;
+            border-radius: 5px;
+        }
+
+        .pagination-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 20px;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+
+        .pagination-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+            min-width: 40px;
+        }
+
+        .pagination-btn:hover {
+            background: #0056b3;
+        }
+
+        .pagination-btn.active {
+            background: #28a745;
+            font-weight: bold;
+        }
+
+        .pagination-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
@@ -172,6 +250,8 @@
     <script>
         let currentFiles = [];
         let selectedFile = null;
+        let currentPage = 1;
+        const itemsPerPage = 10; // 每页显示10条新闻
 
         // 页面加载时获取新闻列表
         document.addEventListener('DOMContentLoaded', function() {
@@ -186,7 +266,8 @@
 
                 if (data.success) {
                     currentFiles = data.files;
-                    displayNewsList(data.files);
+                    currentPage = 1; // 重置到第一页
+                    displayNewsList();
                 } else {
                     showError('加载新闻列表失败: ' + data.error);
                 }
@@ -196,19 +277,35 @@
         }
 
         // 显示新闻列表
-        function displayNewsList(files) {
+        function displayNewsList() {
             const container = document.getElementById('news-files-container');
 
-            if (files.length === 0) {
+            if (currentFiles.length === 0) {
                 container.innerHTML = '<div class="no-files">暂无新闻文件</div>';
                 return;
             }
 
+            // 计算分页
+            const totalPages = Math.ceil(currentFiles.length / itemsPerPage);
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const filesForCurrentPage = currentFiles.slice(startIndex, endIndex);
+
             let html = '';
-            files.forEach(file => {
+
+            // 添加分页信息
+            html += `
+                <div class="pagination-info" style="text-align: center; margin-bottom: 15px; color: #666;">
+                    第 ${currentPage} 页，共 ${totalPages} 页（总计 ${currentFiles.length} 条新闻）
+                </div>
+            `;
+
+            // 显示当前页的新闻
+            html += '<div class="news-grid">';
+            filesForCurrentPage.forEach(file => {
                 const [date, time] = file.split('/');
                 const displayDate = formatDate(date);
-                const displayTime = time.replace(/-/g, ':');
+                const displayTime = formatTime(time);
 
                 html += `
                     <div class="news-item" onclick="selectNewsFile('${file}')">
@@ -216,8 +313,38 @@
                     </div>
                 `;
             });
+            html += '</div>';
+
+            // 添加分页控件
+            if (totalPages > 1) {
+                html += '<div class="pagination-controls">';
+
+                // 上一页按钮
+                if (currentPage > 1) {
+                    html += `<button class="pagination-btn" onclick="changePage(${currentPage - 1})">上一页</button>`;
+                }
+
+                // 页码按钮
+                for (let i = Math.max(1, currentPage - 2); i <= Math.min(totalPages, currentPage + 2); i++) {
+                    const activeClass = i === currentPage ? 'active' : '';
+                    html += `<button class="pagination-btn ${activeClass}" onclick="changePage(${i})">${i}</button>`;
+                }
+
+                // 下一页按钮
+                if (currentPage < totalPages) {
+                    html += `<button class="pagination-btn" onclick="changePage(${currentPage + 1})">下一页</button>`;
+                }
+
+                html += '</div>';
+            }
 
             container.innerHTML = html;
+        }
+
+        // 切换页面
+        function changePage(page) {
+            currentPage = page;
+            displayNewsList();
         }
 
         // 选择新闻文件
@@ -318,6 +445,12 @@
             const month = dateStr.substring(4, 6);
             const day = dateStr.substring(6, 8);
             return `${year}-${month}-${day}`;
+        }
+
+        // 格式化时间，显示为中国时间（+8时区）
+        function formatTime(timeStr) {
+            const time = timeStr.replace(/-/g, ':');
+            return `${time} (UTC+8)`;
         }
 
         // 复制新闻内容

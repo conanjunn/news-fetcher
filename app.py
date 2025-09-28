@@ -147,6 +147,35 @@ def run_news_now():
         abort(500, description=f"服务器内部错误: {str(e)}")
 
 
+@app.route('/scheduler/cleanup-now')
+def run_cleanup_now():
+    """手动执行一次新闻清理"""
+    logger.info("收到手动执行新闻清理请求")
+    try:
+        from news_cleaner import clean_old_news
+        result = clean_old_news()
+
+        if result['success']:
+            return jsonify({
+                'success': True,
+                'message': '新闻清理执行成功',
+                'deleted_files': result['deleted_files'],
+                'deleted_dirs': result['deleted_dirs'],
+                'cutoff_time': result['cutoff_time']
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': '新闻清理执行失败',
+                'error': result['error'],
+                'deleted_files': result['deleted_files'],
+                'deleted_dirs': result['deleted_dirs']
+            }), 500
+    except Exception as e:
+        logger.error(f"执行新闻清理时发生错误: {e}")
+        abort(500, description=f"服务器内部错误: {str(e)}")
+
+
 # 错误处理器
 @app.errorhandler(400)
 def bad_request(error):
