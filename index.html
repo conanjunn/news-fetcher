@@ -122,15 +122,39 @@
             font-style: italic;
             padding: 50px;
         }
+
+        .news-article {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+
+        .copy-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-top: 10px;
+            transition: background-color 0.3s;
+        }
+
+        .copy-btn:hover {
+            background: #218838;
+        }
+
+        .copy-success {
+            color: #155724;
+            font-size: 12px;
+            margin-left: 5px;
+        }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>📰 新闻总结系统</h1>
-        <p>查看AI总结的财联社电报新闻</p>
-        <button class="btn" onclick="refreshNewsList()">🔄 刷新列表</button>
-    </div>
-
     <div class="news-list">
         <h3>📋 新闻文件列表</h3>
         <div id="news-files-container">
@@ -228,15 +252,32 @@
         function displayNewsContent(content) {
             const container = document.getElementById('news-content-container');
 
-            // 简单的markdown转HTML
-            let html = content
-                .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-                .replace(/^- (.+)$/gm, '<li>$1</li>')
-                .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
-                .replace(/<font color="red">(.+?)<\/font>/g, '<span style="color: red; font-weight: bold;">$1</span>')
-                .replace(/\n/g, '<br>');
+            // 按照双换行分割新闻条目
+            const articles = content.split('\n\n').filter(article => article.trim());
 
-            container.innerHTML = `<div class="markdown-content">${html}</div>`;
+            let html = '';
+            articles.forEach((article, index) => {
+                // 简单的markdown转HTML
+                let articleHtml = article
+                    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+                    .replace(/^- (.+)$/gm, '<li>$1</li>')
+                    .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
+                    .replace(/<font color="red">(.+?)<\/font>/g, '<span style="color: red; font-weight: bold;">$1</span>')
+                    .replace(/\n/g, '<br>');
+
+                html += `
+                    <div class="news-article">
+                        <div class="markdown-content">${articleHtml}</div>
+                        <button class="copy-btn" onclick="copyNewsContent(${index}, this)">📋 复制这条新闻</button>
+                        <span class="copy-success" id="copy-success-${index}" style="display: none;">已复制!</span>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+
+            // 存储原始文章内容用于复制
+            window.newsArticles = articles;
         }
 
         // 刷新新闻列表
@@ -257,6 +298,49 @@
             const month = dateStr.substring(4, 6);
             const day = dateStr.substring(6, 8);
             return `${year}-${month}-${day}`;
+        }
+
+        // 复制新闻内容
+        async function copyNewsContent(index, button) {
+            if (!window.newsArticles || !window.newsArticles[index]) {
+                alert('内容不存在');
+                return;
+            }
+
+            try {
+                await navigator.clipboard.writeText(window.newsArticles[index]);
+
+                // 显示复制成功提示
+                const successSpan = document.getElementById(`copy-success-${index}`);
+                if (successSpan) {
+                    successSpan.style.display = 'inline';
+                    setTimeout(() => {
+                        successSpan.style.display = 'none';
+                    }, 2000);
+                }
+            } catch (err) {
+                // 降级方案：使用传统的复制方法
+                const textarea = document.createElement('textarea');
+                textarea.value = window.newsArticles[index];
+                document.body.appendChild(textarea);
+                textarea.select();
+
+                try {
+                    document.execCommand('copy');
+                    // 显示复制成功提示
+                    const successSpan = document.getElementById(`copy-success-${index}`);
+                    if (successSpan) {
+                        successSpan.style.display = 'inline';
+                        setTimeout(() => {
+                            successSpan.style.display = 'none';
+                        }, 2000);
+                    }
+                } catch (execErr) {
+                    alert('复制失败，请手动复制');
+                }
+
+                document.body.removeChild(textarea);
+            }
         }
     </script>
 </body>
