@@ -32,6 +32,11 @@ class Config:
     # 定时任务配置
     CRON_MINUTE: int = 0  # 每小时的0分执行
 
+    # 智能调度配置
+    DAY_HOURS: str = '6-23'  # 白天时间段（6:00-23:59）
+    NIGHT_HOURS: str = '0,3'  # 夜间时间段（0:00,3:00）
+    NIGHT_SCHEDULE_COMMENT: str = '夜间降低频率：0点和3点执行'
+
     # 日志配置
     LOG_LEVEL: str = 'INFO'
     LOG_FORMAT: str = '%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s'

@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 这是一个基于Flask的新闻抓取和展示系统，主要功能包括：
 - 自动抓取财联社电报新闻并使用LLM进行智能分类总结
-- 定时任务调度（每小时整点执行）
+- 智能定时任务调度（白天每小时，夜间每3小时执行）
 - Web界面展示和新闻管理
 - 完整的安全防护和日志系统
 
@@ -92,6 +92,12 @@ curl http://localhost:5000/scheduler/status
 - `DEBUG` - 调试模式
 - `CRON_MINUTE` - 定时执行分钟数
 - `NEWS_SCRIPT_TIMEOUT` - 脚本执行超时时间
+
+### 智能调度配置
+系统采用智能调度策略，根据时间段调整抓取频率：
+- `DAY_HOURS` - 白天时间段（6-23点），每小时执行一次
+- `NIGHT_HOURS` - 夜间时间段（0,3点），每3小时执行一次
+- 夜间降低频率可减少服务器负载和API调用成本
 
 ## 安全特性
 

@@ -53,16 +53,27 @@ class SchedulerManager:
             logger.error(f"关闭调度器时发生错误: {e}")
 
     def add_hourly_news_job(self) -> None:
-        """添加每小时新闻抓取任务"""
+        """添加智能新闻抓取任务"""
         try:
+            # 白天时间段每小时执行一次
             self.scheduler.add_job(
                 func=self._run_news_task,
-                trigger=CronTrigger(minute=config.CRON_MINUTE),
+                trigger=CronTrigger(hour=config.DAY_HOURS, minute=config.CRON_MINUTE),
                 id='hourly_news_fetch',
-                name='每小时新闻抓取任务',
+                name='白天新闻抓取任务（每小时）',
                 replace_existing=True
             )
-            logger.info("定时任务配置成功：每小时整点执行news.py")
+
+            # 夜间时间段每3小时执行一次
+            self.scheduler.add_job(
+                func=self._run_news_task,
+                trigger=CronTrigger(hour=config.NIGHT_HOURS, minute=config.CRON_MINUTE),
+                id='night_news_fetch',
+                name='夜间新闻抓取任务（每3小时）',
+                replace_existing=True
+            )
+
+            logger.info(f"智能定时任务配置成功：白天({config.DAY_HOURS}点)每小时，夜间({config.NIGHT_HOURS}点)每3小时")
         except Exception as e:
             logger.error(f"添加定时任务失败: {e}")
             raise
