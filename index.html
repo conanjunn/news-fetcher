@@ -458,7 +458,7 @@
                 utcDate.setUTCHours(hours, minutes, seconds, 0);
 
                 // 转换为中国时区 (UTC+8)
-                const chinaTime = new Date(utcDate.getTime() + 8 * 60 * 60 * 1000);
+                const chinaTime = new Date(utcDate.getTime());
 
                 // 格式化输出
                 const chinaHours = chinaTime.getUTCHours().toString().padStart(2, '0');
